@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console appender configuration -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    
+    <!-- Suppress Apache POI debug messages -->
+    
+    <logger name="ch.qos.logback" level="ERROR" />
+    <logger name="org.apache.poi" level="ERROR" />
+    <logger name="org.apache.poi.openxml4j" level="ERROR" />
+    <logger name="org.apache.poi.openxml4j.opc" level="ERROR" />
+    <logger name="org.apache.poi.openxml4j.opc.PackageRelationshipCollection" level="ERROR" />
+    
+    <!-- Root logger configuration -->
+    <root level="WARN">
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>
