@@ -504,7 +504,7 @@ public class NEBWorkSheetService {
                                         if (sheetConfigObj instanceof List) {
                                             @SuppressWarnings("unchecked")
                                             List<Map<String, Object>> sheetConfigs = (List<Map<String, Object>>) sheetConfigObj;
-                                            List<String> mismatchedValues = checkCrossFileEqualCondition(fileNameList, workbooks, sheetConfigs);
+                                            List<String> mismatchedValues = checkCrossCompare(fileNameList, workbooks, sheetConfigs);
 
                                             if (!mismatchedValues.isEmpty()) {
                                                 String errorCode = "CROSS_FILE_COMPARE";
@@ -572,6 +572,62 @@ public class NEBWorkSheetService {
         }
     }
 
+    private static List<String> checkCrossCompare(List<String> fileNames, List<Workbook> workbooks,
+        List<Map<String, Object>> sheetConfigs) throws IOException {
+            if (sheetConfigs.size() != 2) {
+                throw new IllegalArgumentException("CROSSFILEDUPLICATED ต้องมี 2 ชุดข้อมูล");
+            }
+
+            Map<String, Workbook> fileWorkbookMap = new HashMap<>();
+            for (int i = 0; i < fileNames.size(); i++) {
+                fileWorkbookMap.put(new File(fileNames.get(i)).getName(), workbooks.get(i));
+            }
+
+            Set<String> values1 = new HashSet<>();
+            Set<String> values2 = new HashSet<>();
+
+            for (int i = 0; i < 2; i++) {
+                Map<String, Object> cfg = sheetConfigs.get(i);
+                String fileName = (String) cfg.get("fileName");
+                String sheetName = (String) cfg.get("sheetName");
+                String rangeStr = (String) cfg.get("rangeStr");
+
+                Workbook wb = fileWorkbookMap.get(fileName);
+                if (wb == null) {
+                    throw new IllegalArgumentException("ไม่พบ Workbook สำหรับไฟล์: " + fileName);
+                }
+
+                List<String> values = ExcelReader.getAllValuesInRange(wb, sheetName, rangeStr, null);
+                if (i == 0) {
+                    values1.addAll(values);
+                } else {
+                    values2.addAll(values);
+                }
+            }
+
+            double sumValues1 = 0.0;
+            double sumValues2 = 0.0;
+
+
+            List<String> notEq = new ArrayList<>();
+            for (String v : values1) {
+                if (v != null && v.trim().matches("^-?\\d+(\\.\\d+)?$")) {
+                    sumValues1 += Double.parseDouble(v.trim());
+                }
+            }
+            for (String v : values2) {
+                if (v != null && v.trim().matches("^-?\\d+(\\.\\d+)?$")) {
+                    sumValues2 += Double.parseDouble(v.trim());
+                }
+            }
+
+
+            if (Double.compare(sumValues1, sumValues2) != 0) {
+                notEq.add(sumValues1 + " ผลรวมไม่เท่ากับ " + sumValues2);
+            }
+
+            return notEq; // ถ้าว่าง = เท่ากัน, ถ้าไม่ว่าง = มีความต่าง
+    }
 
     private static List<String> checkCrossFileEqualCondition(
                 List<String> fileNames,
@@ -616,13 +672,8 @@ public class NEBWorkSheetService {
                     notMatched.add(v);
                 }
             }
-            // for (String v : values2) {
-            //     if (values1.contains(v)) {
-            //         notMatched.add(v);
-            //     }
-            // }
 
-            return notMatched; // ถ้าว่าง = เท่ากัน, ถ้าไม่ว่าง = มีความต่าง
+            return notMatched;
         }
 
 
@@ -654,7 +705,7 @@ public class NEBWorkSheetService {
                     // [\"ค่าจัดการเรียนการสอน\"])])" // ใช้ได้
                     // "CHKSHEETDUPLICATE([(\"คำนวณเงินเดือน\", B15:EOF, [\"ตำแหน่งว่าง\"]),
                     // (\"คำนวณบำเหน็จบำนาญ\", C12:EOF, [])])" // ใช้ได้
-                    "CROSSFILECOMPARE( EQUAL ,[ [\"01007_1_1_07_เงินอุดหนุนสำหรับการจัดการศึกษาภาคบังคับ (เงินเดือนครู ค่าจ้างประจำ).xlsx\", \"คำนวณบำเหน็จบำนาญ\", \"C12:EOF\"], [\"01007_1_1_07_เงินอุดหนุนสำหรับการจัดการศึกษาภาคบังคับ EDIT.xlsx\", \"คำนวณบำเหน็จบำนาญ\", \"C12:EOF\"]])"
+                    "CROSSFILECOMPARE( EQUAL ,[ [\"01007_1_1_07_เงินอุดหนุนสำหรับการจัดการศึกษาภาคบังคับ (เงินเดือนครู ค่าจ้างประจำ).xlsx\", \"คำนวณบำเหน็จบำนาญ\", \"H12:EOF\"], [\"01007_1_1_07_เงินอุดหนุนสำหรับการจัดการศึกษาภาคบังคับ EDIT.xlsx\", \"คำนวณบำเหน็จบำนาญ\", \"H12:EOF\"]])"
             };
             // "CHKSHEETDUPLICATE([(\"แบบคำนวณ (ภาพรวม)\", B15:EOF,
             // [\"ค่าจัดการเรียนการสอน\"]), (\"Topup\", B15:EOF,
